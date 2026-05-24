@@ -1,0 +1,134 @@
+@page "/"
+@page "/login"
+@using GotaSix.Models
+@using GotaSix.Layout
+@using GotaSix.Services
+@inject HttpClient Http
+@inject NavigationManager Navigation
+@inject UserSession Session
+@layout EmptyLayout
+
+<div class="auth-wrapper">
+    <div class="auth-brand-panel">
+        <div class="brand-logo-large">💧</div>
+        <h2 class="brand-title-large">Gota6</h2>
+        <p class="brand-description">Acompanhe seus fluxos e gerencie seus dados com eficiência e precisão dentro da nossa plataforma.</p>
+    </div>
+
+    <div class="auth-form-panel">
+        <div class="auth-header">
+            <div class="auth-logo-mobile">💧</div>
+            <h1 class="auth-title">Bem-vindo ao Gota6</h1>
+            <p class="auth-subtitle">Faça login para continuar</p>
+        </div>
+
+        <button class="btn-google">
+            <img src="https://www.google.com/favicon.ico" style="width:16px; margin-right:10px;" alt="Google" />
+            Continuar com o Google
+        </button>
+
+        <div class="divider">OU</div>
+
+        <EditForm Model="@loginModel" OnValidSubmit="HandleLogin">
+            <DataAnnotationsValidator />
+
+            <div class="form-group">
+                <label>E-mail</label>
+                <InputText @bind-Value="loginModel.Email" class="form-control" placeholder="seu@email.com" />
+                <ValidationMessage For="@(() => loginModel.Email)" style="color: #dc2626; font-size: 13px;" />
+            </div>
+
+            <div class="form-group">
+                <label>Senha</label>
+                <div class="password-container">
+                    <InputText @bind-Value="loginModel.Password" type="@(mostrarSenha ? "text" : "password")" class="form-control" placeholder="••••••••" />
+                    <button type="button" class="btn-toggle-password" @onclick="ToggleSenha" title="Mostrar/Ocultar senha">
+                        @if (mostrarSenha)
+                        {
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+                        }
+                        else
+                        {
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                        }
+                    </button>
+                </div>
+                <ValidationMessage For="@(() => loginModel.Password)" style="color: #dc2626; font-size: 13px;" />
+            </div>
+
+            @if (!string.IsNullOrEmpty(mensagemErro))
+            {
+                <div style="background-color: #fee2e2; color: #dc2626; padding: 10px; border-radius: 8px; font-size: 14px; margin-bottom: 15px; text-align: left;">
+                    ⚠️ @mensagemErro
+                </div>
+            }
+
+            <button type="submit" class="btn-primary" disabled="@carregando">
+                @(carregando ? "Autenticando..." : "Entrar")
+            </button>
+        </EditForm>
+
+        <div class="auth-links">
+            <a href="/forgot-password">Esqueceu sua senha?</a>
+            <br /><br />
+            Não tem uma conta? <a href="/register">Cadastre-se</a>
+        </div>
+    </div>
+</div>
+
+@code {
+    private LoginRequest loginModel = new LoginRequest();
+    private bool mostrarSenha = false;
+    private bool carregando = false;
+    private string mensagemErro = "";
+
+    private void ToggleSenha() => mostrarSenha = !mostrarSenha;
+
+    private async Task HandleLogin()
+    {
+        carregando = true;
+        mensagemErro = "";
+
+        try
+        {
+            var urlApi = "http://localhost:5252/api/auth/login"; 
+            var response = await Http.PostAsJsonAsync(urlApi, loginModel);
+
+            if (response.IsSuccessStatusCode)
+            {
+                // MUDANÇA AQUI: Lemos os dados de sucesso vindos da API
+                var resultado = await response.Content.ReadFromJsonAsync<LoginResponseDto>();
+                
+                if (resultado != null)
+                {
+                    // Guardamos o ID e o Nome na sessão global do Blazor
+                    Session.UsuarioId = resultado.UsuarioId;
+                    Session.Nome = resultado.Nome;
+
+                    // Navega para a Dashboard que cuidará do redirecionamento
+                    Navigation.NavigateTo("/dashboard");
+                }
+            }
+            else
+            {
+                mensagemErro = "E-mail ou senha incorretos.";
+            }
+        }
+        catch (Exception ex)
+        {
+            mensagemErro = "Erro de conexão. A API está rodando?";
+            Console.WriteLine($"Erro: {ex.Message}");
+        }
+        finally
+        {
+            carregando = false;
+        }
+    }
+
+    // Classe auxiliar para mapear o retorno de sucesso da API
+    public class LoginResponseDto
+    {
+        public int UsuarioId { get; set; }
+        public string Nome { get; set; }
+    }
+}

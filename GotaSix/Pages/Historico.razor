@@ -1,0 +1,310 @@
+@page "/historico"
+@using GotaSix.Services
+@using GotaSix.Layout
+@inject HttpClient Http
+@inject NavigationManager Navigation
+@inject UserSession Session
+@inject IJSRuntime Js
+@layout EmptyLayout
+
+<div class="dashboard-layout">
+    <aside class="sidebar">
+        <div style="font-size: 24px; font-weight: 800; color: #0284c7; margin-bottom: 40px; display: flex; align-items: center; gap: 10px;">
+            💧 Gota6
+        </div>
+        <nav style="display: flex; flex-direction: column; gap: 10px;">
+            <a href="/dashboard" style="padding: 12px; color: #64748b; text-decoration: none; font-weight: 600;">🏠 Início</a>
+            <a href="/nova-leitura" style="padding: 12px; color: #64748b; text-decoration: none;">➕ Nova Leitura</a>
+            <a href="/historico" style="padding: 12px; background: #e0f2fe; color: #0369a1; border-radius: 8px; text-decoration: none;">📊 Histórico</a>
+            <a href="/configuracoes" style="padding: 12px; color: #64748b; text-decoration: none;">⚙️ Configurações</a>
+        </nav>
+    </aside>
+
+    <main class="main-content">
+        <header class="dash-header" style="margin-bottom: 30px;">
+            <h1 style="font-size: 24px; font-weight: 700;">Histórico de Leituras</h1>
+        </header>
+
+        @if (!string.IsNullOrEmpty(mensagemGlobal))
+        {
+            <div style="background-color: #e0f2fe; color: #0284c7; padding: 10px; border-radius: 8px; font-size: 14px; margin-bottom: 20px;">
+                ℹ️ @mensagemGlobal
+            </div>
+        }
+
+        @if (carregando)
+        {
+            <p style="color: #64748b;">Carregando seus registros...</p>
+        }
+        else if (leituras == null || !leituras.Any())
+        {
+            <div style="text-align: center; padding: 40px; color: #64748b;">
+                <p>Nenhuma leitura registrada ainda.</p>
+                <button class="btn-primary" @onclick='() => Navigation.NavigateTo("/nova-leitura")' style="width: auto; margin-top: 15px;">Cadastrar Primeira Leitura</button>
+            </div>
+        }
+        else
+        {
+            <div style="background: white; padding: 25px; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); margin-bottom: 30px;">
+                <h3 style="font-size: 16px; margin-bottom: 20px; color: #1c1a4a;">Consumo por Pessoa (L/dia)</h3>
+                <div style="position: relative; width: 100%; height: 250px;">
+                    <svg viewBox="0 0 500 200" style="width: 100%; height: 100%; overflow: visible;">
+                        <line x1="0" y1="0" x2="500" y2="0" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="4" />
+                        <line x1="0" y1="50" x2="500" y2="50" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="4" />
+                        <line x1="0" y1="100" x2="500" y2="100" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="4" />
+                        <line x1="0" y1="150" x2="500" y2="150" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="4" />
+                        <line x1="0" y1="200" x2="500" y2="200" stroke="#cbd5e1" stroke-width="2" />
+                        <line x1="0" y1="0" x2="0" y2="200" stroke="#cbd5e1" stroke-width="2" />
+
+                        @if (pontosGrafico.Count > 0)
+                        {
+                            <polyline points="@string.Join(" ", pontosGrafico.Select(p => $"{p.X.ToString(System.Globalization.CultureInfo.InvariantCulture)},{p.Y.ToString(System.Globalization.CultureInfo.InvariantCulture)}"))" fill="none" stroke="#0284c7" stroke-width="3" />
+                            @foreach (var ponto in pontosGrafico)
+                            {
+                                <circle cx="@(ponto.X.ToString(System.Globalization.CultureInfo.InvariantCulture))" cy="@(ponto.Y.ToString(System.Globalization.CultureInfo.InvariantCulture))" r="5" fill="#ffffff" stroke="#0284c7" stroke-width="2" />
+                                @((MarkupString)$"<text x='{ponto.X.ToString(System.Globalization.CultureInfo.InvariantCulture)}' y='220' font-size='12' fill='#64748b' text-anchor='middle'>{ponto.Label}</text>")
+                            }
+                        }
+                    </svg>
+                </div>
+            </div>
+
+            <h3 style="font-size: 18px; margin-bottom: 20px; color: #1c1a4a;">Todas as Leituras (@leituras.Count)</h3>
+            <div style="display: flex; flex-direction: column; gap: 15px;">
+                @foreach (var item in leituras)
+                {
+                    <div style="background: white; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 15px;">
+                        
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="color: #64748b; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 5px;">
+                                <span>⌨️</span> MANUAL
+                            </span>
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <span style="color: #64748b; font-size: 13px; margin-right: 10px;">@item.DataFormatada</span>
+                                
+                                @if (!item.EmEdicao)
+                                {
+                                    <button @onclick="() => HabilitarEdicao(item)" style="background: none; border: none; color: #0284c7; cursor: pointer; padding: 4px;" title="Editar">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                    </button>
+                                    <button @onclick="() => ConfirmarExclusao(item.Id)" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 4px;" title="Excluir">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                                    </button>
+                                }
+                            </div>
+                        </div>
+
+                       @if (item.EmEdicao)
+                        {
+                            <div style="background-color: #f8fafc; padding: 15px; border-radius: 8px; border: 1px dashed #cbd5e1;">
+                                <div style="display: flex; gap: 15px; margin-bottom: 10px;">
+                                    <div style="flex: 1;">
+                                        <label style="font-size: 13px; color: #64748b; margin-bottom: 5px; display: block;">Data da Leitura:</label>
+                                        <input type="date" @bind="item.DataInput" @bind:format="yyyy-MM-dd" class="form-control" style="font-size: 15px; padding: 8px;" />
+                                    </div>
+                                    <div style="flex: 1;">
+                                        <label style="font-size: 13px; color: #64748b; margin-bottom: 5px; display: block;">Valor (m³):</label>
+                                        <input type="text" value="@item.LeituraInput" @oninput="(e) => TratarVirgulaEdicao(e, item)" class="form-control" style="font-size: 15px; padding: 8px;" />
+                                    </div>
+                                </div>
+                                
+                                <div style="display: flex; gap: 10px;">
+                                    <button @onclick="() => SalvarEdicao(item)" class="btn-primary" style="padding: 8px 15px; width: auto;" disabled="@item.Salvando">
+                                        @(item.Salvando ? "..." : "Salvar")
+                                    </button>
+                                    <button @onclick="() => CancelarEdicao(item)" class="btn-primary" style="padding: 8px 15px; width: auto; background-color: #e2e8f0; color: #475569;">
+                                        Cancelar
+                                    </button>
+                                </div>
+                                @if (!string.IsNullOrEmpty(item.ErroEdicao))
+                                {
+                                    <span style="color: #dc2626; font-size: 12px; margin-top: 5px; display: block;">@item.ErroEdicao</span>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <div style="font-size: 28px; font-weight: 800; color: #1c1a4a;">
+                                @item.LeituraAtual.ToString("F4") <small style="font-size: 16px; font-weight: 600;">m³</small>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span style="color: #64748b; font-size: 14px;">@item.ConsumoLitrosPorPessoa.ToString("F0") L/pessoa/dia</span>
+                                @if (item.AlertaVazamento)
+                                {
+                                    <span style="background: #fee2e2; color: #b91c1c; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 700;">⚠️ ALTO CONSUMO</span>
+                                }
+                                else
+                                {
+                                    <span style="background: #dcfce7; color: #15803d; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 700;">✓ CONSUMO NORMAL</span>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        }
+    </main>
+</div>
+
+@code {
+    private bool carregando = true;
+    private string mensagemGlobal = "";
+    private List<HistoricoItemDto> leituras = new();
+    private List<PontoGrafico> pontosGrafico = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!Session.EstaLogado)
+        {
+            Navigation.NavigateTo("/login");
+            return;
+        }
+        await CarregarDadosHistorico();
+    }
+
+    private async Task CarregarDadosHistorico()
+    {
+        try
+        {
+            leituras = await Http.GetFromJsonAsync<List<HistoricoItemDto>>($"http://localhost:5252/api/auth/historico/{Session.UsuarioId}");
+            if (leituras != null && leituras.Count > 0)
+                GerarPontosDoGrafico();
+        }
+        catch
+        {
+            mensagemGlobal = "Não foi possível carregar os dados.";
+        }
+        finally
+        {
+            carregando = false;
+        }
+    }
+
+    // === MÉTODOS DE EDIÇÃO ===
+    private void HabilitarEdicao(HistoricoItemDto item)
+    {
+        item.EmEdicao = true;
+        item.ErroEdicao = "";
+        item.LeituraInput = item.LeituraAtual.ToString("F4", System.Globalization.CultureInfo.InvariantCulture);
+        
+        // CORREÇÃO: O Blazor já recebe o objeto DateTime diretamente!
+        item.DataInput = item.DataLeituraReal; 
+    }
+
+    private void CancelarEdicao(HistoricoItemDto item)
+    {
+        item.EmEdicao = false;
+        item.ErroEdicao = "";
+    }
+
+    private void TratarVirgulaEdicao(ChangeEventArgs e, HistoricoItemDto item)
+    {
+        var texto = e.Value?.ToString() ?? "";
+        item.LeituraInput = texto.Contains(",") ? texto.Replace(",", ".") : texto;
+    }
+
+    private async Task SalvarEdicao(HistoricoItemDto item)
+    {
+        item.ErroEdicao = "";
+
+        if (!double.TryParse(item.LeituraInput, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double valorConvertido))
+        {
+            item.ErroEdicao = "Formato numérico inválido.";
+            return;
+        }
+
+        // CORREÇÃO: Removemos a conversão manual de data, pois o item.DataInput já é um DateTime validado pelo navegador.
+
+        item.Salvando = true;
+
+        try
+        {
+            // CORREÇÃO: Passamos o item.DataInput direto no payload
+            var payload = new { ValorLeitura = valorConvertido, DataLeitura = item.DataInput };
+            var response = await Http.PutAsJsonAsync($"http://localhost:5252/api/auth/historico/{item.Id}", payload);
+
+            if (response.IsSuccessStatusCode)
+            {
+                mensagemGlobal = "Registro atualizado com sucesso!";
+                await CarregarDadosHistorico(); 
+            }
+            else
+            {
+                var erroApi = await response.Content.ReadFromJsonAsync<dynamic>();
+                item.ErroEdicao = erroApi?.GetProperty("mensagem").GetString() ?? "Erro ao atualizar.";
+            }
+        }
+        catch
+        {
+            item.ErroEdicao = "Falha de comunicação.";
+        }
+        finally
+        {
+            item.Salvando = false;
+        }
+    }
+
+    // === EXCLUSÃO E GRÁFICO (Continuam iguais) ===
+    private async Task ConfirmarExclusao(int id)
+    {
+        bool confirmado = await Js.InvokeAsync<bool>("confirm", "Deseja excluir este registro?");
+        if (!confirmado) return;
+
+        try
+        {
+            var response = await Http.DeleteAsync($"http://localhost:5252/api/auth/historico/{id}");
+            if (response.IsSuccessStatusCode)
+            {
+                leituras.RemoveAll(l => l.Id == id);
+                GerarPontosDoGrafico();
+            }
+        }
+        catch { mensagemGlobal = "Falha ao excluir."; }
+    }
+
+    private void GerarPontosDoGrafico()
+    {
+        pontosGrafico.Clear();
+        var leiturasGrafico = leituras.OrderBy(l => l.Id).ToList();
+        int totalPontos = leiturasGrafico.Count;
+        if (totalPontos == 0) return;
+
+        double maxConsumo = leiturasGrafico.Max(l => l.ConsumoLitrosPorPessoa);
+        if (maxConsumo < 200) maxConsumo = 200; 
+
+        double svgWidth = 500.0, svgHeight = 200.0;
+        for (int i = 0; i < totalPontos; i++)
+        {
+            var item = leiturasGrafico[i];
+            double x = totalPontos == 1 ? svgWidth / 2 : (svgWidth / (totalPontos - 1)) * i;
+            double proporcaoY = item.ConsumoLitrosPorPessoa / maxConsumo;
+            double y = svgHeight - (svgHeight * proporcaoY);
+
+            if (x == 0) x += 15;
+            if (x == svgWidth) x -= 15;
+
+            pontosGrafico.Add(new PontoGrafico { X = x, Y = y, Label = item.DataCurta });
+        }
+    }
+
+    // Adição de propriedades para controlar o estado da edição na UI
+    public class HistoricoItemDto
+    {
+        public int Id { get; set; }
+        public string DataFormatada { get; set; }
+        public string DataCurta { get; set; }
+        public DateTime DataLeituraReal { get; set; }
+        public double LeituraAtual { get; set; }
+        public double ConsumoLitrosPorPessoa { get; set; }
+        public bool AlertaVazamento { get; set; }
+        
+        // Propriedades UI-Only
+        public bool EmEdicao { get; set; }
+        public string LeituraInput { get; set; }
+        public DateTime DataInput { get; set; }
+        public string ErroEdicao { get; set; }
+        public bool Salvando { get; set; }
+    }
+
+    public class PontoGrafico { public double X { get; set; } public double Y { get; set; } public string Label { get; set; } }
+}

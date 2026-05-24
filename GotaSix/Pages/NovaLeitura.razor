@@ -1,0 +1,181 @@
+@page "/nova-leitura"
+@using GotaSix.Services
+@using GotaSix.Layout
+@inject HttpClient Http
+@inject NavigationManager Navigation
+@inject UserSession Session
+@layout EmptyLayout
+
+<div class="dashboard-layout">
+    <aside class="sidebar">
+        <div style="font-size: 24px; font-weight: 800; color: #0284c7; margin-bottom: 40px; display: flex; align-items: center; gap: 10px;">
+            💧 Gota6
+        </div>
+        <nav style="display: flex; flex-direction: column; gap: 10px;">
+            <a href="/dashboard" style="padding: 12px; color: #64748b; text-decoration: none; font-weight: 600;">🏠 Início</a>
+            <a href="/nova-leitura" style="padding: 12px; background: #e0f2fe; color: #0369a1; border-radius: 8px; text-decoration: none;">➕ Nova Leitura</a>
+            <a href="/historico" style="padding: 12px; color: #64748b; text-decoration: none;">📊 Histórico</a>
+            <a href="/configuracoes" style="padding: 12px; color: #64748b; text-decoration: none;">⚙️ Configurações</a>
+        </nav>
+    </aside>
+
+    <main class="main-content" style="display: flex; flex-direction: column; align-items: flex-start;">
+        <header class="dash-header" style="margin-bottom: 40px;">
+            <div>
+                <h1 style="font-size: 24px; font-weight: 700;">Registrar Leitura</h1>
+                <p style="color: #64748b;">Insira a medição atual do seu hidrômetro para acompanharmos seu consumo.</p>
+            </div>
+        </header>
+
+        <div style="background: white; padding: 30px; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); width: 100%; max-width: 500px;">
+            
+            @if (carregandoDados)
+            {
+                <p style="color: #64748b; text-align: center;">Buscando sua última leitura...</p>
+            }
+            else
+            {
+                <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                    <span style="color: #64748b; font-size: 14px; display: block;">Última Leitura Registrada:</span>
+                    <strong style="font-size: 20px; color: #0f172a;">@leituraAnterior.ToString("F4") m³</strong>
+                </div>
+
+                @if (!string.IsNullOrEmpty(erro))
+                {
+                    <div style="background-color: #fee2e2; color: #dc2626; padding: 10px; border-radius: 8px; font-size: 14px; margin-bottom: 20px;">
+                        ⚠️ @erro
+                    </div>
+                }
+
+                @if (avisoVirgula)
+                {
+                    <div style="background-color: #fef08a; color: #854d0e; padding: 10px; border-radius: 8px; font-size: 14px; margin-bottom: 20px;">
+                        ⚠️ Detectamos um ponto. O sistema requer o uso de vírgula (,) para decimais. Já corrigimos para você!
+                    </div>
+                }
+
+                <div class="form-group" style="margin-bottom: 25px;">
+                    <label style="font-weight: 600; color: #1c1a4a;">Nova Leitura no Relógio (m³)</label>
+                    <input type="text" value="@leituraInput" @oninput="VerificarVirgula" class="form-control" placeholder="Ex: @((leituraAnterior + 1.5).ToString("F3", System.Globalization.CultureInfo.GetCultureInfo("pt-BR")))" style="font-size: 18px; padding: 15px;" />
+                </div>
+
+                <div style="display: flex; gap: 15px;">
+                    <button @onclick="SalvarNovaLeitura" class="btn-primary" disabled="@enviando" style="flex: 1;">
+                        @(enviando ? "Registrando..." : "Salvar Leitura")
+                    </button>
+                    <button @onclick="Voltar" class="btn-primary" style="flex: 1; background-color: #f1f5f9; color: #64748b;">
+                        Cancelar
+                    </button>
+                </div>
+            }
+        </div>
+    </main>
+</div>
+
+@code {
+    private string leituraInput = "";
+    private double leituraAnterior = 0;
+    
+    private bool carregandoDados = true;
+    private bool enviando = false;
+    private bool avisoVirgula = false;
+    private string erro = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!Session.EstaLogado)
+        {
+            Navigation.NavigateTo("/login");
+            return;
+        }
+
+        try
+        {
+            // Busca o valor da última leitura aproveitando a rota que criamos para a Dashboard
+            var response = await Http.GetFromJsonAsync<DashboardDto>($"http://localhost:5252/api/auth/dashboard/{Session.UsuarioId}");
+            if (response != null && !response.PrimeiroAcesso)
+            {
+                leituraAnterior = response.LeituraAtual;
+            }
+        }
+        catch
+        {
+            erro = "Aviso: Não foi possível carregar a leitura anterior.";
+        }
+        finally
+        {
+            carregandoDados = false;
+        }
+    }
+
+    // Método que roda em tempo real enquanto o usuário digita
+    private void VerificarVirgula(ChangeEventArgs e)
+    {
+        var textoDigitado = e.Value?.ToString() ?? "";
+
+        if (textoDigitado.Contains("."))
+        {
+            avisoVirgula = true;
+            // Altera automaticamente o ponto por vírgula no texto do campo
+            leituraInput = textoDigitado.Replace(".", ",");
+        }
+        else
+        {
+            avisoVirgula = false;
+            leituraInput = textoDigitado;
+        }
+    }
+
+    private async Task SalvarNovaLeitura()
+    {
+        erro = "";
+
+        // Garante a conversão correta ignorando formatações regionais do Windows do usuário
+        if (!double.TryParse(leituraInput, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.GetCultureInfo("pt-BR"), out double valorConvertido))
+        {
+            erro = "Formato inválido. Use apenas números e uma vírgula decimal.";
+            return;
+        }
+
+        // 3. Validação matemática impedindo números menores ou iguais ao anterior
+        if (valorConvertido <= leituraAnterior)
+        {
+            erro = $"A nova leitura não pode ser menor ou igual à última registrada ({leituraAnterior} m³). Verifique o relógio.";
+            return;
+        }
+
+        enviando = true;
+
+        try
+        {
+            var payload = new { UsuarioId = Session.UsuarioId, ValorLeitura = valorConvertido };
+            var response = await Http.PostAsJsonAsync("http://localhost:5252/api/auth/nova-leitura", payload);
+
+            if (response.IsSuccessStatusCode)
+            {
+                Navigation.NavigateTo("/dashboard");
+            }
+            else
+            {
+                erro = "Não foi possível registrar a leitura no banco de dados.";
+            }
+        }
+        catch
+        {
+            erro = "Falha de comunicação com o servidor.";
+        }
+        finally
+        {
+            enviando = false;
+        }
+    }
+
+    private void Voltar() => Navigation.NavigateTo("/dashboard");
+
+    // DTO simples apenas para capturar o dado que precisamos da API
+    public class DashboardDto
+    {
+        public bool PrimeiroAcesso { get; set; }
+        public double LeituraAtual { get; set; }
+    }
+}

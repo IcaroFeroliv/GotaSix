@@ -1,0 +1,251 @@
+@page "/register"
+@using GotaSix.Models
+@using GotaSix.Layout
+@using System.Net.Http.Json
+@inject HttpClient Http
+@layout EmptyLayout
+
+<div class="auth-wrapper">
+    <div class="auth-brand-panel">
+        <div class="brand-logo-large">💧</div>
+        <h2 class="brand-title-large">Crie sua Conta</h2>
+        <p class="brand-description">Junte-se à plataforma Gota6 e tenha acesso a todas as ferramentas de otimização de projetos.</p>
+    </div>
+
+    <div class="auth-form-panel">
+        <a href="/login" class="back-link">← Voltar para o login</a>
+
+        <div class="auth-header">
+            <h1 class="auth-title">Criar nova conta</h1>
+            <p class="auth-subtitle">Preencha os campos abaixo para se registrar</p>
+        </div>
+
+        <EditForm Model="@registerModel" OnValidSubmit="HandleRegister">
+            <DataAnnotationsValidator />
+
+            <h3 style="font-size: 16px; color: #1c1a4a; margin: 25px 0 15px; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px;">Dados Pessoais</h3>
+
+            <div class="form-group">
+                <label>Nome Completo</label>
+                <InputText @bind-Value="registerModel.Nome" class="form-control" placeholder="Como devemos chamar você?" />
+                <ValidationMessage For="@(() => registerModel.Nome)" style="color: #dc2626; font-size: 13px;" />
+            </div>
+
+            <div class="form-group">
+                <label>E-mail</label>
+                <InputText @bind-Value="registerModel.Email" class="form-control" placeholder="seu@email.com" />
+                <ValidationMessage For="@(() => registerModel.Email)" style="color: #dc2626; font-size: 13px;" />
+            </div>
+
+            <h3 style="font-size: 16px; color: #1c1a4a; margin: 25px 0 15px; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px;">Localização</h3>
+
+            <div class="form-group">
+                <label>CEP</label>
+                <InputText @bind-Value="registerModel.Cep" @onblur="BuscarCep" class="form-control" placeholder="00000-000" />
+                <ValidationMessage For="@(() => registerModel.Cep)" style="color: #dc2626; font-size: 13px;" />
+                
+                @if (buscandoCep)
+                {
+                    <span style="font-size: 12px; color: #0284c7; display: block; margin-top: 5px;">🔍 Buscando endereço...</span>
+                }
+                @if (!string.IsNullOrEmpty(mensagemErro))
+                {
+                    <span style="font-size: 12px; color: #dc2626; display: block; margin-top: 5px;">⚠️ @mensagemErro</span>
+                }
+            </div>
+
+            @if (!string.IsNullOrEmpty(registerModel.Cidade))
+            {
+                <div class="form-group">
+                    <label>Rua / Logradouro</label>
+                    <InputText @bind-Value="registerModel.Rua" class="form-control" placeholder="Digite o nome da rua" />
+                </div>
+                <div class="form-group">
+                    <label>Bairro</label>
+                    <InputText @bind-Value="registerModel.Bairro" class="form-control" placeholder="Digite o bairro" />
+                </div>
+                <div class="form-group">
+                    <label>Cidade / Estado</label>
+                    <div style="display: flex; gap: 10px;">
+                        <InputText @bind-Value="registerModel.Cidade" class="form-control" style="background-color: #f1f5f9; width: 80%;" readonly />
+                        <InputText @bind-Value="registerModel.Estado" class="form-control" style="background-color: #f1f5f9; width: 20%;" readonly />
+                    </div>
+                </div>
+            }
+
+            <h3 style="font-size: 16px; color: #1c1a4a; margin: 25px 0 15px; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px;">Detalhes do Consumo</h3>
+
+            <div style="display: flex; gap: 15px; margin-bottom: 20px;">
+                <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                    <label>Tipo de Imóvel</label>
+                    <InputSelect @bind-Value="registerModel.TipoImovel" class="form-control">
+                        <option value="">Selecione...</option>
+                        <option value="Casa">Casa</option>
+                        <option value="Apartamento">Apartamento</option>
+                        <option value="Comercial">Ponto Comercial</option>
+                        <option value="Condominio">Condomínio (Inteiro)</option>
+                    </InputSelect>
+                    <ValidationMessage For="@(() => registerModel.TipoImovel)" style="color: #dc2626; font-size: 13px;" />
+                </div>
+
+                <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                    <label>Qtd. de Moradores</label>
+                    <InputNumber @bind-Value="registerModel.QuantidadeMoradores" class="form-control" min="1" max="50" />
+                    <ValidationMessage For="@(() => registerModel.QuantidadeMoradores)" style="color: #dc2626; font-size: 13px;" />
+                </div>
+            </div>
+
+            <h3 style="font-size: 16px; color: #1c1a4a; margin: 25px 0 15px; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px;">Segurança</h3>
+
+            <div class="form-group">
+                <label>Senha</label>
+                <div class="password-container">
+                    <InputText @bind-Value="registerModel.Password" type="@(mostrarSenha ? "text" : "password")" class="form-control" placeholder="Mínimo 8 caracteres" />
+                    <button type="button" class="btn-toggle-password" @onclick="ToggleSenha">
+                        @if (mostrarSenha) { <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg> }
+                        else { <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg> }
+                    </button>
+                </div>
+                <ValidationMessage For="@(() => registerModel.Password)" style="color: #dc2626; font-size: 13px;" />
+            </div>
+
+            <div class="form-group">
+                <label>Confirmar Senha</label>
+                <div class="password-container">
+                    <InputText @bind-Value="registerModel.ConfirmPassword" type="@(mostrarConfirmacaoSenha ? "text" : "password")" class="form-control" placeholder="Digite a senha novamente" />
+                    <button type="button" class="btn-toggle-password" @onclick="ToggleConfirmacaoSenha">
+                        @if (mostrarConfirmacaoSenha) { <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg> }
+                        else { <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg> }
+                    </button>
+                </div>
+                <ValidationMessage For="@(() => registerModel.ConfirmPassword)" style="color: #dc2626; font-size: 13px;" />
+            </div>
+
+
+            @if (!string.IsNullOrEmpty(mensagemErroApi))
+            {
+                <div style="background-color: #fee2e2; color: #dc2626; padding: 10px; border-radius: 8px; font-size: 14px; margin-bottom: 15px;">
+                    ⚠️ @mensagemErroApi
+                </div>
+            }
+            @if (!string.IsNullOrEmpty(mensagemSucesso))
+            {
+                <div style="background-color: #dcfce7; color: #15803d; padding: 10px; border-radius: 8px; font-size: 14px; margin-bottom: 15px;">
+                    ✓ @mensagemSucesso
+                </div>
+            }
+
+            <button type="submit" class="btn-primary" style="margin-top: 20px;">Finalizar Cadastro</button>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    private RegisterRequest registerModel = new RegisterRequest();
+    private bool buscandoCep = false;
+    private string mensagemErro = "";
+    private bool carregando = false;
+    private string mensagemSucesso = "";
+    private string mensagemErroApi = "";
+
+private bool mostrarSenha = false;
+    private bool mostrarConfirmacaoSenha = false;
+
+    private void ToggleSenha() => mostrarSenha = !mostrarSenha;
+    private void ToggleConfirmacaoSenha() => mostrarConfirmacaoSenha = !mostrarConfirmacaoSenha;
+    private async Task BuscarCep()
+    {
+        // Limpa mensagens anteriores
+        mensagemErro = "";
+
+        if (string.IsNullOrWhiteSpace(registerModel.Cep)) return;
+
+        // Remove caracteres especiais para validação e envio
+        var cepLimpo = registerModel.Cep.Replace("-", "").Replace(".", "").Trim();
+        
+        if (cepLimpo.Length == 8)
+        {
+            buscandoCep = true;
+            StateHasChanged(); // Força o Blazor a mostrar o texto de "Buscando..."
+
+            try
+            {
+                // Faz a chamada assíncrona para a API do ViaCEP
+                var response = await Http.GetFromJsonAsync<ViaCepResponse>($"https://viacep.com.br/ws/{cepLimpo}/json/");
+
+                if (response != null && !response.Erro)
+                {
+                    registerModel.Rua = response.Logradouro;
+                    registerModel.Bairro = response.Bairro;
+                    registerModel.Cidade = response.Localidade;
+                    registerModel.Estado = response.Uf;
+                }
+                else
+                {
+                    mensagemErro = "CEP não encontrado.";
+                    LimparEndereco();
+                }
+            }
+            catch (Exception ex)
+            {
+                mensagemErro = "Erro ao conectar com o serviço de CEP.";
+                Console.WriteLine($"Erro na requisição: {ex.Message}");
+                LimparEndereco();
+            }
+            finally
+            {
+                buscandoCep = false;
+                StateHasChanged(); // Força o Blazor a atualizar a tela com os novos dados
+            }
+        }
+        else
+        {
+            mensagemErro = "O CEP deve conter 8 dígitos.";
+            LimparEndereco();
+        }
+    }
+
+    private void LimparEndereco()
+    {
+        registerModel.Rua = "";
+        registerModel.Bairro = "";
+        registerModel.Cidade = "";
+        registerModel.Estado = "";
+    }
+
+    private async Task HandleRegister()
+{
+    carregando = true;
+    mensagemErroApi = "";
+    mensagemSucesso = "";
+
+    try
+    {
+        // ATENÇÃO: Troque "X" pela porta real da sua API!
+        var urlApi = "http://localhost:5252/api/auth/register"; 
+        
+        var response = await Http.PostAsJsonAsync(urlApi, registerModel);
+
+        if (response.IsSuccessStatusCode)
+        {
+            mensagemSucesso = "Conta criada com sucesso! Você já pode fazer login.";
+            registerModel = new RegisterRequest(); // Limpa o formulário
+        }
+        else
+        {
+            // Lê o erro que a API mandou (ex: "E-mail já cadastrado")
+            var erro = await response.Content.ReadFromJsonAsync<dynamic>();
+            mensagemErroApi = erro?.GetProperty("mensagem").GetString() ?? "Erro ao criar conta.";
+        }
+    }
+    catch (Exception ex)
+    {
+        mensagemErroApi = "Erro de conexão. A API está rodando?";
+        Console.WriteLine($"Erro: {ex.Message}");
+    }
+    finally
+    {
+        carregando = false;
+    }
+}
+}

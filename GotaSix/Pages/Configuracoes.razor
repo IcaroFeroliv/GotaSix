@@ -1,0 +1,217 @@
+@page "/configuracoes"
+@using GotaSix.Services
+@using GotaSix.Layout
+@inject HttpClient Http
+@inject NavigationManager Navigation
+@inject UserSession Session
+@inject IJSRuntime Js
+@layout EmptyLayout
+
+<div class="dashboard-layout">
+    <aside class="sidebar">
+        <div style="font-size: 24px; font-weight: 800; color: #0284c7; margin-bottom: 40px; display: flex; align-items: center; gap: 10px;">
+            💧 Gota6
+        </div>
+        <nav style="display: flex; flex-direction: column; gap: 10px;">
+            <a href="/dashboard" style="padding: 12px; color: #64748b; text-decoration: none; font-weight: 600;">🏠 Início</a>
+            <a href="/nova-leitura" style="padding: 12px; color: #64748b; text-decoration: none;">➕ Nova Leitura</a>
+            <a href="/historico" style="padding: 12px; color: #64748b; text-decoration: none;">📊 Histórico</a>
+            <a href="/configuracoes" style="padding: 12px; background: #e0f2fe; color: #0369a1; border-radius: 8px; text-decoration: none;">⚙️ Configurações</a>
+        </nav>
+    </aside>
+
+    <main class="main-content">
+        <header class="dash-header" style="margin-bottom: 30px;">
+            <h1 style="font-size: 24px; font-weight: 700;">Configurações do Sistema</h1>
+            <p style="color: #64748b;">Gerencie os dados da sua residência e credenciais de acesso.</p>
+        </header>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; align-items: start;">
+            
+            <div style="background: white; padding: 30px; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); border: 1px solid #e2e8f0;">
+                <h3 style="font-size: 18px; margin-bottom: 25px; color: #1c1a4a; display: flex; align-items: center; gap: 10px;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0ea5e9" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>
+                    Dados da Residência
+                </h3>
+
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label style="font-weight: 600; color: #475569; font-size: 14px;">Nome do titular</label>
+                    <input type="text" @bind="perfil.Nome" class="form-control" style="padding: 12px;" />
+                </div>
+
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label style="font-weight: 600; color: #475569; font-size: 14px;">CEP</label>
+                    <input type="text" @bind="perfil.Cep" @onblur="BuscarCep" maxlength="8" class="form-control" placeholder="00000000" style="padding: 12px;" />
+                </div>
+
+                <div style="display: flex; gap: 15px; margin-bottom: 20px;">
+                    <div style="flex: 2;">
+                        <label style="font-weight: 600; color: #475569; font-size: 14px;">Cidade</label>
+                        <input type="text" @bind="perfil.Cidade" class="form-control" style="padding: 12px; background: #f8fafc;" readonly />
+                    </div>
+                    <div style="flex: 1;">
+                        <label style="font-weight: 600; color: #475569; font-size: 14px;">Estado</label>
+                        <input type="text" @bind="perfil.Estado" class="form-control" style="padding: 12px; background: #f8fafc;" readonly />
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label style="font-weight: 600; color: #475569; font-size: 14px;">Número de moradores</label>
+                    <input type="number" min="1" @bind="perfil.QuantidadeMoradores" class="form-control" style="padding: 12px;" />
+                </div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 30px;">
+                
+                <div style="background: white; padding: 30px; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); border: 1px solid #e2e8f0;">
+                    <h3 style="font-size: 18px; margin-bottom: 25px; color: #1c1a4a; display: flex; align-items: center; gap: 10px;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                        Alterar Senha
+                    </h3>
+
+                    <div class="form-group" style="margin-bottom: 20px;">
+                        <label style="font-weight: 600; color: #475569; font-size: 14px;">Nova Senha</label>
+                        <div class="password-container">
+                            <input type="@(verSenha1 ? "text" : "password")" @bind="perfil.NovaSenha" class="form-control" placeholder="Mínimo 6 caracteres" style="padding: 12px;" />
+                            <button type="button" class="btn-toggle-password" @onclick="() => verSenha1 = !verSenha1" title="Mostrar/Ocultar senha">
+                                @if (verSenha1)
+                                {
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+                                }
+                                else
+                                {
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                }
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label style="font-weight: 600; color: #475569; font-size: 14px;">Confirmar Nova Senha</label>
+                        <div class="password-container">
+                            <input type="@(verSenha2 ? "text" : "password")" @bind="confirmarSenha" class="form-control" placeholder="Repita a senha" style="padding: 12px;" />
+                            <button type="button" class="btn-toggle-password" @onclick="() => verSenha2 = !verSenha2" title="Mostrar/Ocultar senha">
+                                @if (verSenha2)
+                                {
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+                                }
+                                else
+                                {
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                }
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 15px;">
+                    @if (!string.IsNullOrEmpty(mensagem))
+                    {
+                        <div style="background-color: @corMensagem; color: white; padding: 15px; border-radius: 8px; font-size: 14px; text-align: center;">
+                            @mensagem
+                        </div>
+                    }
+
+                    <button class="btn-primary" @onclick="SalvarAlteracoes" disabled="@salvando" style="padding: 16px; font-size: 16px; font-weight: 700;">
+                        @(salvando ? "Processando..." : "Atualizar Perfil Completo")
+                    </button>
+
+                    <div style="display: flex; justify-content: space-between; margin-top: 10px;">
+                        <button @onclick="SairDaConta" style="background: none; border: none; color: #64748b; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                            🚪 Sair da Conta
+                        </button>
+                        <button @onclick="ExcluirConta" style="background: none; border: none; color: #ef4444; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                            🗑️ Excluir Residência
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+@code {
+    private PerfilViewModel perfil = new();
+    private string confirmarSenha = "";
+    private bool verSenha1 = false;
+    private bool verSenha2 = false;
+    private bool carregando = true;
+    private bool salvando = false;
+    private string mensagem = "";
+    private string corMensagem = "#10b981";
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!Session.EstaLogado) { Navigation.NavigateTo("/login"); return; }
+        try {
+            perfil = await Http.GetFromJsonAsync<PerfilViewModel>($"http://localhost:5252/api/auth/usuario/{Session.UsuarioId}");
+        } finally { carregando = false; }
+    }
+
+    private async Task BuscarCep()
+    {
+        if (perfil.Cep?.Length == 8) {
+            var res = await Http.GetFromJsonAsync<ViaCepResult>($"https://viacep.com.br/ws/{perfil.Cep}/json/");
+            if (res != null && !res.Erro) { perfil.Cidade = res.Localidade; perfil.Estado = res.Uf; }
+        }
+    }
+
+    private async Task SalvarAlteracoes()
+    {
+        // VALIDAÇÃO DE SENHA NO FRONT-END
+        if (!string.IsNullOrWhiteSpace(perfil.NovaSenha)) {
+            if (perfil.NovaSenha != confirmarSenha) {
+                mensagem = "As senhas não coincidem!";
+                corMensagem = "#ef4444";
+                return;
+            }
+            if (perfil.NovaSenha.Length < 6) {
+                mensagem = "A senha deve ter pelo menos 6 caracteres.";
+                corMensagem = "#ef4444";
+                return;
+            }
+        }
+
+        salvando = true;
+        mensagem = "";
+
+        try {
+            var response = await Http.PutAsJsonAsync($"http://localhost:5252/api/auth/usuario/{Session.UsuarioId}", perfil);
+            if (response.IsSuccessStatusCode) {
+                mensagem = "Dados atualizados com sucesso!";
+                corMensagem = "#10b981";
+                Session.Nome = perfil.Nome;
+                perfil.NovaSenha = "";
+                confirmarSenha = "";
+            } else {
+                mensagem = "Erro ao salvar alterações.";
+                corMensagem = "#ef4444";
+            }
+        } catch {
+            mensagem = "Falha de conexão.";
+            corMensagem = "#ef4444";
+        } finally { salvando = false; }
+    }
+
+    private void SairDaConta() { Session.UsuarioId = 0; Navigation.NavigateTo("/login"); }
+
+    private async Task ExcluirConta() {
+        bool ok = await Js.InvokeAsync<bool>("confirm", "ATENÇÃO: Isso apagará todos os seus dados e histórico de leituras permanentemente. Deseja continuar?");
+        if (ok) {
+            // Aqui você chamaria um endpoint de DELETE se desejar implementar a exclusão total
+            SairDaConta();
+        }
+    }
+
+    public class PerfilViewModel {
+        public string Nome { get; set; }
+        public string Email { get; set; }
+        public string Cep { get; set; }
+        public string Cidade { get; set; }
+        public string Estado { get; set; }
+        public int QuantidadeMoradores { get; set; }
+        public string NovaSenha { get; set; }
+    }
+
+    public class ViaCepResult { public string Localidade { get; set; } public string Uf { get; set; } public bool Erro { get; set; } }
+}

@@ -1,0 +1,145 @@
+@page "/dashboard"
+@using GotaSix.Services
+@using GotaSix.Layout
+@inject HttpClient Http
+@inject NavigationManager Navigation
+@inject UserSession Session
+@layout EmptyLayout
+
+@if (carregando)
+{
+    <div style="display: flex; justify-content: center; align-items: center; min-height: 100vh; background-color: #f0f4f8; font-family: sans-serif;">
+        <div style="text-align: center; color: #1c1a4a;">
+            <h2>💧 Carregando o Gota6...</h2>
+            <p>Buscando suas informações de consumo de forma segura.</p>
+        </div>
+    </div>
+}
+else
+{
+    <div class="dashboard-layout">
+        <aside class="sidebar">
+            <div style="font-size: 24px; font-weight: 800; color: #0284c7; margin-bottom: 40px; display: flex; align-items: center; gap: 10px;">
+                💧 Gota6
+            </div>
+            <nav style="display: flex; flex-direction: column; gap: 10px;">
+                <a href="/dashboard" style="padding: 12px; background: #e0f2fe; color: #0369a1; border-radius: 8px; text-decoration: none; font-weight: 600;">🏠 Início</a>
+                <a href="/nova-leitura" style="padding: 12px; color: #64748b; text-decoration: none;">➕ Nova Leitura</a>
+                <a href="/historico" style="padding: 12px; color: #64748b; text-decoration: none;">📊 Histórico</a>
+                <a href="/configuracoes" style="padding: 12px; color: #64748b; text-decoration: none;">⚙️ Configurações</a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header class="dash-header">
+                <div>
+                    <h1 style="font-size: 24px; font-weight: 700;">Olá, @dadosDash.Nome</h1>
+                    <p style="color: #64748b;">Residência: @dadosDash.Cidade, @dadosDash.Estado</p>
+                </div>
+                <button class="btn-primary" @onclick="IrParaLeitura" style="width: auto; padding: 10px 20px;">+ Nova Leitura</button>
+            </header>
+
+            @if (dadosDash.AlertaVazamento)
+            {
+                <div class="alert-box" style="background-color: #fee2e2; border-color: #ef4444; color: #991b1b;">
+                    <div style="font-size: 24px;">⚠️</div>
+                    <div>
+                        <strong style="display: block;">Alerta de Suspeita de Vazamento!</strong>
+                        <span>Seu consumo recente disparou além da meta. Verifique torneiras e descargas.</span>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="alert-box">
+                    <div style="font-size: 24px;"></div>
+                    <div>
+                        <strong style="display: block;">Consumo Normal</strong>
+                        <span>Seu consumo está controlado e dentro das metas recomendadas.</span>
+                    </div>
+                </div>
+            }
+
+            <h2 style="font-size: 18px; margin-bottom: 20px;">Consumo Atual <span style="font-weight: 400; color: #64748b; font-size: 14px;">(@dadosDash.QuantidadeMoradores moradores)</span></h2>
+
+           <div class="stats-grid">
+                <div class="stat-card">
+                    <span class="stat-label">Consumo por Pessoa</span>
+                    <div class="stat-value">@(((dadosDash.ConsumoPeriodo * 1000) / dadosDash.DiasPassados / dadosDash.QuantidadeMoradores).ToString("F0")) <small style="font-size: 14px;">L/dia</small></div>
+                    <div class="stat-label">Meta OMS: 110 L/dia</div>
+                </div>
+
+                <div class="stat-card">
+                    <span class="stat-label">Volume Total Diário (Casa)</span>
+                    <div class="stat-value">@(((dadosDash.ConsumoPeriodo * 1000) / dadosDash.DiasPassados).ToString("F0")) <small style="font-size: 14px;">Litros/dia</small></div>
+                    <div class="stat-label">Registrado em m³: @dadosDash.ConsumoPeriodo.ToString("F3") m³</div>
+                </div>
+            </div>
+
+            <div class="stat-card" style="text-align: left;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h3 style="font-size: 16px;">Último Registro Armazenado</h3>
+                    <span style="color: #64748b; font-size: 13px;">@dadosDash.DataLeitura</span>
+                </div>
+                <div style="font-size: 36px; font-weight: 800; color: #1c1a4a;">@dadosDash.LeituraAtual.ToString("F4") <small style="font-size: 18px;">m³</small></div>
+            </div>
+        </main>
+    </div>
+}
+
+@code {
+    private bool carregando = true;
+    private DashboardViewModel dadosDash = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        // 1. Bloqueia o acesso se não houver usuário logado na sessão
+        if (!Session.EstaLogado)
+        {
+            Navigation.NavigateTo("/login");
+            return;
+        }
+
+        try
+        {
+            // 2. Faz o pedido dos dados à API passando o ID logado
+            var response = await Http.GetFromJsonAsync<DashboardViewModel>($"http://localhost:5252/api/auth/dashboard/{Session.UsuarioId}");
+
+            if (response != null)
+            {
+               // 3. Se for o primeiro acesso, desvia imediatamente
+                if (response.PrimeiroAcesso)
+                {
+                    Navigation.NavigateTo("/leitura-inicial");
+                }
+                else
+                {
+                    // 4. Se tiver dados, preenche o modelo da tela
+                    dadosDash = response;
+                    carregando = false;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Erro ao renderizar dashboard: {ex.Message}");
+        }
+    }
+
+    private void IrParaLeitura() => Navigation.NavigateTo("/nova-leitura");
+
+    // Classe de espelho (ViewModel) para receber as propriedades organizadas da API
+    public class DashboardViewModel
+    {
+        public bool PrimeiroAcesso { get; set; }
+        public string Nome { get; set; }
+        public string Cidade { get; set; }
+        public string Estado { get; set; }
+        public int QuantidadeMoradores { get; set; }
+        public double LeituraAtual { get; set; }
+        public double ConsumoPeriodo { get; set; }
+        public bool AlertaVazamento { get; set; }
+        public string DataLeitura { get; set; }
+        public double DiasPassados { get; set; }
+    }
+}

@@ -1,0 +1,121 @@
+@page "/leitura-inicial"
+@using GotaSix.Services
+@using GotaSix.Layout
+@inject HttpClient Http
+@inject NavigationManager Navigation
+@inject UserSession Session
+@layout EmptyLayout
+
+<div class="auth-wrapper">
+    <div class="auth-brand-panel">
+        <div class="brand-logo-large">💧</div>
+        <h2 class="brand-title-large">Primeiro Acesso</h2>
+        <p class="brand-description">Para começarmos a monitorar seus gastos e proteger sua casa contra vazamentos, precisamos da sua leitura inicial.</p>
+    </div>
+
+    <div class="auth-form-panel">
+        <div class="auth-header">
+            <h1 class="auth-title">Configuração Inicial</h1>
+            <p class="auth-subtitle">Olá, @Session.Nome! Vá até o seu hidrômetro (relógio de água) e informe o valor numérico atual.</p>
+        </div>
+
+        @if (!string.IsNullOrEmpty(erro))
+        {
+            <div style="background-color: #fee2e2; color: #dc2626; padding: 10px; border-radius: 8px; font-size: 14px; margin-bottom: 15px;">
+                ⚠️ @erro
+            </div>
+        }
+
+        @if (avisoVirgula)
+        {
+            <div style="background-color: #fef08a; color: #854d0e; padding: 10px; border-radius: 8px; font-size: 14px; margin-bottom: 20px; text-align: left;">
+                ⚠️ Detectamos um ponto. O sistema requer o uso de virgula (,) para decimais. Já corrigimos para você!
+            </div>
+        }
+
+        <div class="form-group">
+            <label>Valor Atual do Hidrômetro (m³)</label>
+            <input type="text" value="@leituraInput" @oninput="VerificarVirgula" class="form-control" placeholder="Ex: 21474.545" />
+            <small style="color: #64748b; font-size: 12px; display: block; margin-top: 5px;">Digite todos os números pretos e vermelhos do visor.</small>
+        </div>
+
+        <button @onclick="SalvarLeituraInicial" class="btn-primary" disabled="@enviando" style="margin-top: 15px;">
+            @(enviando ? "Gravando dados..." : "Confirmar e Ir para o Painel")
+        </button>
+    </div>
+</div>
+
+@code {
+    private string leituraInput = ""; // Mudado para string para controlar a digitação
+    private bool enviando = false;
+    private bool avisoVirgula = false;
+    private string erro = "";
+
+    protected override void OnInitialized()
+    {
+        if (!Session.EstaLogado)
+        {
+            Navigation.NavigateTo("/login");
+        }
+    }
+
+    // 3. Método que intercepta a vírgula em tempo real
+    private void VerificarVirgula(ChangeEventArgs e)
+    {
+        var textoDigitado = e.Value?.ToString() ?? "";
+
+        if (textoDigitado.Contains("."))
+        {
+            avisoVirgula = true;
+            leituraInput = textoDigitado.Replace(".", ",");
+        }
+        else
+        {
+            avisoVirgula = false;
+            leituraInput = textoDigitado;
+        }
+    }
+
+    private async Task SalvarLeituraInicial()
+    {
+        erro = "";
+
+        // 4. Tenta converter o texto para número usando vírgula como separador decimal
+        if (!double.TryParse(leituraInput, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.GetCultureInfo("pt-BR"), out double valorConvertido))
+        {
+            erro = "Formato inválido. Use apenas números e uma vírgula decimal.";
+            return;
+        }
+
+        if (valorConvertido <= 0)
+        {
+            erro = "Por favor, insira um valor de leitura válido maior que zero.";
+            return;
+        }
+
+        enviando = true;
+
+        try
+        {
+            var payload = new { UsuarioId = Session.UsuarioId, ValorLeitura = valorConvertido };
+            var response = await Http.PostAsJsonAsync("http://localhost:5252/api/auth/nova-leitura", payload);
+
+            if (response.IsSuccessStatusCode)
+            {
+                Navigation.NavigateTo("/dashboard");
+            }
+            else
+            {
+                erro = "Não foi possível salvar a leitura no momento.";
+            }
+        }
+        catch
+        {
+            erro = "Falha de comunicação com o servidor.";
+        }
+        finally
+        {
+            enviando = false;
+        }
+    }
+}

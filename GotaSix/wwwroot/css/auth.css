@@ -1,0 +1,316 @@
+/* Container principal que ocupa 100% da tela do PC */
+.auth-wrapper {
+    display: flex;
+    min-height: 100vh;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #ffffff;
+}
+
+/* PAINEL ESQUERDO: Identidade Visual (Só aparece no PC) */
+.auth-brand-panel {
+    flex: 1;
+    background-color: #1c1a4a; /* O azul escuro do seu protótipo */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    color: #ffffff;
+    padding: 40px;
+    text-align: center;
+}
+
+.brand-logo-large {
+    font-size: 72px;
+    margin-bottom: 20px;
+    animation: float 3s ease-in-out infinite;
+}
+
+.brand-title-large {
+    font-size: 36px;
+    font-weight: 800;
+    margin-bottom: 10px;
+    letter-spacing: 1px;
+}
+
+.brand-description {
+    font-size: 16px;
+    color: #a5b4fc;
+    max-width: 400px;
+    line-height: 1.5;
+}
+
+/* PAINEL DIREITO: Onde ficam os formulários */
+.auth-form-panel {
+    width: 100%;
+    max-width: 550px; /* Garante que o formulário não fique esticado no PC */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 60px;
+    background-color: #ffffff;
+}
+
+/* Elementos internos do formulário */
+.auth-header {
+    margin-bottom: 30px;
+}
+
+.auth-logo-mobile {
+    display: none; /* Escondido no PC, pois já temos o painel grande */
+    font-size: 32px;
+    margin-bottom: 15px;
+}
+
+.auth-title {
+    font-size: 28px;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 8px;
+}
+
+.auth-subtitle {
+    color: #64748b;
+    font-size: 15px;
+}
+
+/* Botão customizado do Google */
+.btn-google {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background-color: #ffffff;
+    color: #334155;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    margin-bottom: 25px;
+    transition: background-color 0.2s;
+}
+.btn-google:hover { background-color: #f8fafc; }
+
+/* Linha divisória "OU" */
+.divider {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    color: #94a3b8;
+    font-size: 13px;
+    margin-bottom: 25px;
+}
+.divider::before, .divider::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid #e2e8f0;
+}
+.divider:not(:empty)::before { margin-right: .5em; }
+.divider:not(:empty)::after { margin-left: .5em; }
+
+/* Campos de entrada */
+.form-group {
+    margin-bottom: 20px;
+    text-align: left;
+}
+.form-group label {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    color: #334155;
+    margin-bottom: 6px;
+}
+.form-control {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 14px;
+    box-sizing: border-box;
+    transition: border-color 0.2s;
+}
+.form-control:focus {
+    border-color: #1c1a4a;
+    outline: none;
+}
+
+/* Botão Principal */
+.btn-primary {
+    width: 100%;
+    padding: 14px;
+    background-color: #0f172a;
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 15px;
+    cursor: pointer;
+    margin-top: 10px;
+    transition: background-color 0.2s;
+}
+.btn-primary:hover { background-color: #1e293b; }
+
+.auth-links {
+    margin-top: 25px;
+    font-size: 14px;
+    color: #64748b;
+    text-align: center;
+}
+.auth-links a {
+    color: #1c1a4a;
+    font-weight: 600;
+    text-decoration: none;
+}
+.auth-links a:hover { text-decoration: underline; }
+
+.back-link {
+    display: inline-flex;
+    align-items: center;
+    color: #64748b;
+    font-size: 14px;
+    text-decoration: none;
+    margin-bottom: 30px;
+    font-weight: 500;
+}
+.back-link:hover { color: #0f172a; }
+
+/* Animação simples de flutuar para a gota de água */
+@keyframes float {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+    100% { transform: translateY(0px); }
+}
+
+/* RESPONSIVIDADE: Regras para telas de celular (até 768px) */
+@media (max-width: 768px) {
+    .auth-brand-panel {
+        display: none; /* Esconde o painel lateral no celular */
+    }
+    .auth-wrapper {
+        justify-content: center;
+        background-color: #f8fafc;
+    }
+    .auth-form-panel {
+        max-width: 450px;
+        padding: 30px;
+        margin: auto 20px;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+    .auth-logo-mobile {
+        display: block; /* Mostra a gota pequena no celular */
+        text-align: center;
+    }
+    .auth-title, .auth-subtitle {
+        text-align: center;
+    }
+}
+/* Container para alinhar o campo de senha e o ícone */
+.password-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+/* Dá um espaçamento na direita para o texto não passar por baixo do ícone */
+.password-container .form-control {
+    padding-right: 40px; 
+}
+
+/* Estilo do botão de mostrar/ocultar (o olhinho) */
+.btn-toggle-password {
+    position: absolute;
+    right: 10px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    height: 100%;
+    transition: color 0.2s;
+}
+
+.btn-toggle-password:hover {
+    color: #0f172a;
+}
+
+/* Layout da Dashboard */
+.dashboard-layout {
+    display: flex;
+    min-height: 100vh;
+    background-color: #f0f4f8;
+}
+
+.sidebar {
+    width: 260px;
+    background-color: #ffffff;
+    border-right: 1px solid #e2e8f0;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+}
+
+.main-content {
+    flex: 1;
+    padding: 40px;
+}
+
+/* Header da Dashboard */
+.dash-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+}
+
+/* Alerta de Consumo (O box verde) */
+.alert-box {
+    background-color: #ecfdf5;
+    border: 1px solid #10b981;
+    color: #065f46;
+    padding: 20px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 30px;
+}
+
+/* Grid de Cards */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 25px;
+    margin-bottom: 30px;
+}
+
+.stat-card {
+    background: white;
+    padding: 25px;
+    border-radius: 16px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    text-align: center;
+}
+
+.stat-value {
+    font-size: 32px;
+    font-weight: 800;
+    color: #1c1a4a;
+    margin: 10px 0;
+}
+
+.stat-label {
+    color: #64748b;
+    font-size: 14px;
+}
+
+.progress-container {
+    background: #e2e8f0;
+    height: 8px;
+    border-radius: 4px;
+    margin-top: 15px;
+}
